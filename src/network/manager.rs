@@ -20,7 +20,7 @@ use crate::primitives::Chainspec;
 type Transport = SslStream<TcpStream>;
 pub type FramedTransport = tokio_util::codec::Framed<Transport, LengthDelimitedCodec>;
 
-pub struct NetworkManager {
+pub struct Manager {
     local_addr: SocketAddr,
     tcp_ep: Arc<Mutex<TcpListener>>,
     identity: Identity,
@@ -32,7 +32,7 @@ pub struct NetworkManager {
     conn_pool_listener_handle: Option<JoinHandle<()>>,
 }
 
-impl NetworkManager {
+impl Manager {
     pub async fn new(
         local_addr: SocketAddr,
         event_tx: Sender<(SocketAddr, Message<Vec<u8>>)>,

@@ -1,4 +1,4 @@
 pub mod error;
+pub mod manager;
 pub mod message;
-pub mod network_manager;
 pub mod tls;

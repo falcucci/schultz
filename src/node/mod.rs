@@ -6,8 +6,8 @@ use tokio::sync::mpsc::Receiver;
 use tokio::sync::RwLock;
 
 use crate::error::Result;
+use crate::network::manager::Manager;
 use crate::network::message::Message;
-use crate::network::network_manager::NetworkManager;
 use crate::primitives::Chainspec;
 
 /// Channel bounds
@@ -17,7 +17,7 @@ type EventReceiver = Receiver<(SocketAddr, Message<Vec<u8>>)>;
 
 #[derive(Clone)]
 pub struct Node {
-    pub network_manager: Arc<RwLock<NetworkManager>>,
+    pub manager: Arc<RwLock<Manager>>,
     pub event_rx: Arc<RwLock<EventReceiver>>,
     pub bootstrap_test_addr: Option<SocketAddr>,
 }
@@ -31,10 +31,10 @@ impl Node {
         let (event_tx, event_rx) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
         let chainspec = Chainspec::from_path(&chainspec_path).expect("Failed to load chainspec");
 
-        let network_manager = NetworkManager::new(schultz_addr, event_tx, chainspec).await?;
+        let manager = Manager::new(schultz_addr, event_tx, chainspec).await?;
 
         let mut node = Self {
-            network_manager: Arc::new(RwLock::new(network_manager)),
+            manager: Arc::new(RwLock::new(manager)),
             event_rx: Arc::new(RwLock::new(event_rx)),
             bootstrap_test_addr: None,
         };
