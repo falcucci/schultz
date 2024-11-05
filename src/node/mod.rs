@@ -33,7 +33,7 @@ impl Node {
 
         let network_manager = NetworkManager::new(schultz_addr, event_tx, chainspec).await?;
 
-        let mut node = Node {
+        let mut node = Self {
             network_manager: Arc::new(RwLock::new(network_manager)),
             event_rx: Arc::new(RwLock::new(event_rx)),
             bootstrap_test_addr: None,

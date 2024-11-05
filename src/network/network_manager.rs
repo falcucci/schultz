@@ -44,8 +44,6 @@ impl NetworkManager {
 
         let identity = Identity::with_generated_certs().expect("Failed to generate identity");
 
-        // TODO: rename for something as communication module instead of node and
-        // network_manager
         let mut network = Self {
             local_addr,
             tcp_ep: Arc::new(Mutex::new(listener)),
