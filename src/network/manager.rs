@@ -11,7 +11,7 @@ use tokio::task::JoinHandle;
 use tokio_util::codec::LengthDelimitedCodec;
 use tracing::debug;
 
-use super::error::NetworkManagerError;
+use super::error::ManagerError;
 use super::message::Message;
 use super::tls::Identity;
 use crate::primitives::Chainspec;
@@ -37,10 +37,10 @@ impl Manager {
         local_addr: SocketAddr,
         event_tx: Sender<(SocketAddr, Message<Vec<u8>>)>,
         chainspec: Chainspec,
-    ) -> Result<Self, NetworkManagerError> {
+    ) -> Result<Self, ManagerError> {
         let listener = TcpListener::bind(local_addr)
             .await
-            .map_err(|error| NetworkManagerError::ListenerCreation(error, local_addr))?;
+            .map_err(|error| ManagerError::ListenerCreation(error, local_addr))?;
 
         let identity = Identity::with_generated_certs().expect("Failed to generate identity");
 

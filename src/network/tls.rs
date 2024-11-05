@@ -21,7 +21,7 @@ use openssl::x509::X509NameBuilder;
 use openssl::x509::X509NameRef;
 use openssl::x509::X509;
 
-use super::error::NetworkManagerError;
+use super::error::ManagerError;
 use super::error::TLSError;
 use crate::error::Error;
 use crate::utils::Sha512;
@@ -58,10 +58,9 @@ impl Identity {
         }
     }
 
-    pub(crate) fn with_generated_certs() -> Result<Self, NetworkManagerError> {
-        let (not_yet_validated_x509_cert, secret_key) = generate_node_cert().map_err(|error| {
-            NetworkManagerError::Tls(TLSError::CouldNotGenerateTlsCertificate(error))
-        })?;
+    pub(crate) fn with_generated_certs() -> Result<Self, ManagerError> {
+        let (not_yet_validated_x509_cert, secret_key) = generate_node_cert()
+            .map_err(|error| ManagerError::Tls(TLSError::CouldNotGenerateTlsCertificate(error)))?;
         let tls_certificate = validate_self_signed_cert(not_yet_validated_x509_cert)?;
         Ok(Identity::new(secret_key, tls_certificate, None))
     }

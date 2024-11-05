@@ -6,7 +6,7 @@ use serde::Serialize;
 use thiserror::Error;
 
 #[derive(Debug, Error, Serialize)]
-pub enum NetworkManagerError {
+pub enum ManagerError {
     #[error("Failed to bind to address")]
     PeerNotFound,
     #[error("failed to get listener addr")]
@@ -65,6 +65,6 @@ pub enum TLSError {
     InvalidSerialNumber,
 }
 
-impl From<TLSError> for NetworkManagerError {
-    fn from(value: TLSError) -> Self { NetworkManagerError::Tls(value) }
+impl From<TLSError> for ManagerError {
+    fn from(value: TLSError) -> Self { ManagerError::Tls(value) }
 }

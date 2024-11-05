@@ -1,15 +1,15 @@
 use thiserror::Error;
 
-use crate::network::error::NetworkManagerError;
+use crate::network::error::ManagerError;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("Error from the Communications module {0:?}")]
-    NetworkManager(NetworkManagerError),
+    NetworkManager(ManagerError),
 }
 
-impl From<NetworkManagerError> for Error {
-    fn from(err: NetworkManagerError) -> Self { Error::NetworkManager(err) }
+impl From<ManagerError> for Error {
+    fn from(err: ManagerError) -> Self { Error::NetworkManager(err) }
 }
