@@ -1,21 +1,23 @@
 #[cfg(test)]
 use std::str::FromStr;
 
+#[cfg(test)]
+use casper_execution_engine::core::engine_state::MAX_PAYMENT_AMOUNT;
+use casper_types::bytesrepr::FromBytes;
+use casper_types::bytesrepr::ToBytes;
+use casper_types::bytesrepr::{self};
+#[cfg(test)]
+use casper_types::testing::TestRng;
+use casper_types::Motes;
+use casper_types::TimeDiff;
+use casper_types::U512;
 use datasize::DataSize;
 #[cfg(test)]
 use num_traits::Zero;
 #[cfg(test)]
 use rand::Rng;
-use serde::{Deserialize, Serialize};
-
-#[cfg(test)]
-use casper_execution_engine::core::engine_state::MAX_PAYMENT_AMOUNT;
-#[cfg(test)]
-use casper_types::testing::TestRng;
-use casper_types::{
-    bytesrepr::{self, FromBytes, ToBytes},
-    Motes, TimeDiff, U512,
-};
+use serde::Deserialize;
+use serde::Serialize;
 
 /// Configuration values associated with deploys.
 #[derive(Copy, Clone, DataSize, PartialEq, Eq, Serialize, Deserialize, Debug)]
@@ -39,11 +41,11 @@ pub struct DeployConfig {
 impl DeployConfig {
     /// Validates `DeployConfig` parameters
     pub fn is_valid(&self) -> bool {
-        // the total number of deploys + transfers should not exceed the number of approvals because
-        // each deploy or transfer needs at least one approval to be valid
-        if let Some(total_deploy_and_transfer_slots) = self
-            .block_max_deploy_count
-            .checked_add(self.block_max_transfer_count)
+        // the total number of deploys + transfers should not exceed the number of
+        // approvals because each deploy or transfer needs at least one approval
+        // to be valid
+        if let Some(total_deploy_and_transfer_slots) =
+            self.block_max_deploy_count.checked_add(self.block_max_transfer_count)
         {
             self.block_max_approval_count >= total_deploy_and_transfer_slots
         } else {

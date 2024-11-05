@@ -183,4 +183,3 @@ impl FromBytes for AccountsConfig {
         Ok((accounts_config, remainder))
     }
 }
-
