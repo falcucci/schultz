@@ -38,12 +38,23 @@ cargo build -p casper-node --release
 
 ## The very first handshake trial
 
-### Running a node as validator
+### Running a node as bootstraped validator
 
 To run a validator node you will need to specify a config file and launch the validator subcommand:
 
 ```
 sudo RUST_LOG=trace ./target/release/casper-node validator <SCHULTZ-PATH>/examples/config.toml
+```
+
+The Carper node should now be running so we can handle the incoming connections.
+
+<div align="center">
+    <img src="https://github.com/user-attachments/assets/5c1db361-26c0-4e24-8dfb-8433f2f3d05a" alt="Terminal">
+    <em>Casper node running as an initiator</em>
+</div>
+
+```bash
+RUST_LOG=trace cargo run -- bootstrap --addr 127.0.0.1:5001 --bootnode 127.0.0.1:34553 --chainspec ./examples
 ```
 
 ### Generating keys using OpenSSL
