@@ -53,8 +53,90 @@ The Carper node should now be running so we can handle the incoming connections.
     <em>Casper node running as an initiator</em>
 </div>
 
+### Running the Schultz node
+
 ```bash
-RUST_LOG=trace cargo run -- bootstrap --addr 127.0.0.1:5001 --bootnode 127.0.0.1:34553 --chainspec ./examples
+cd schultz && cargo build --release
+```
+
+```bash
+RUST_LOG=trace ./target/release/schultz bootstrap --addr 127.0.0.1:5001 --bootnode 127.0.0.1:34553 --chainspec ./examples
+```
+
+And the similar handshake trace can be found:
+
+```bash
+2024-11-07T05:09:51.320354Z  INFO schultz::node: Starting node at 127.0.0.1:5001
+2024-11-07T05:09:51.326674Z  INFO schultz::network::manager: Starting network communications...
+2024-11-07T05:09:51.326770Z  INFO schultz::network::tls: Generating new keys and certificates
+2024-11-07T05:09:51.330164Z  INFO schultz::network::manager: Starting to listen on TCP Endpoint for incoming connections
+2024-11-07T05:09:51.330212Z  INFO schultz::network::manager: Starting connection pool listener thread
+2024-11-07T05:09:51.330266Z  INFO schultz::network::manager: Network communications started!
+2024-11-07T05:09:51.330275Z TRACE schultz::network::manager: Waiting for incoming connections...
+2024-11-07T05:09:51.330282Z  INFO schultz::network::manager: Connecting to 127.0.0.1:34553
+2024-11-07T05:09:51.338439Z TRACE schultz::network::manager: 1.Trying to send a Handshake to 127.0.0.1:34553
+2024-11-07T05:09:51.338454Z  INFO schultz::network::manager: Sending message to 127.0.0.1:34553
+2024-11-07T05:09:51.338479Z TRACE tokio_util::codec::framed_impl: flushing framed transport
+2024-11-07T05:09:51.338485Z TRACE tokio_util::codec::framed_impl: writing; remaining=103
+2024-11-07T05:09:51.338502Z TRACE tokio_util::codec::framed_impl: framed transport flushed
+2024-11-07T05:09:51.338520Z  INFO schultz::network::manager: Sent a handshake to 127.0.0.1:34553
+2024-11-07T05:09:51.338528Z  INFO schultz::node: Started node at 127.0.0.1:5001
+2024-11-07T05:09:51.338535Z  INFO schultz::node: Starting keepalive task
+2024-11-07T05:09:51.341658Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
+2024-11-07T05:09:51.341681Z TRACE tokio_util::codec::framed_impl: frame decoded from buffer
+2024-11-07T05:09:51.341855Z  INFO schultz::network::manager: Received handshake from the contacted peer
+2024-11-07T05:09:51.341966Z  INFO schultz::network::manager: Handshake complete! Successfully connected to peer 127.0.0.1:34553
+2024-11-07T05:09:51.341985Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
+2024-11-07T05:09:52.326362Z  INFO schultz::network::manager: New connection received!
+2024-11-07T05:09:52.326396Z  INFO schultz::network::manager: Setting up TLS with connected peer
+2024-11-07T05:09:52.326407Z  INFO schultz::network::manager: Setting up TLS with connected peer
+2024-11-07T05:09:52.326417Z  INFO schultz::network::manager: Creating TLS acceptor for incoming connections
+2024-11-07T05:09:52.326690Z  INFO schultz::network::manager: Performing TLS handshake with connected peer
+2024-11-07T05:09:52.326708Z  INFO schultz::network::manager: Starting TLS level handshake
+2024-11-07T05:09:52.338368Z  INFO schultz::network::manager: Receiving peer Ssl certificates
+2024-11-07T05:09:52.338414Z  INFO schultz::network::manager: Verifying peer's certificates for sanity
+2024-11-07T05:09:52.339834Z  INFO schultz::network::manager: Framing the stream to match Casper's encoding
+2024-11-07T05:09:52.339854Z  INFO schultz::network::manager: Inserting stream into schultz connection pool
+2024-11-07T05:09:52.342400Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
+2024-11-07T05:09:52.342436Z TRACE tokio_util::codec::framed_impl: frame decoded from buffer
+2024-11-07T05:09:52.342905Z  INFO schultz::node: Received handshake from 127.0.0.1:52434
+2024-11-07T05:09:52.342928Z  INFO schultz::network::manager: Sending a ping to 127.0.0.1:34553
+2024-11-07T05:09:52.343039Z  INFO schultz::network::manager: Sending message to 127.0.0.1:34553
+2024-11-07T05:09:52.343054Z  INFO schultz::network::manager: Sending Handshake to Casper
+2024-11-07T05:09:52.343065Z TRACE schultz::network::manager: Handshake { network_name: "casper", public_addr: 127.0.0.1:5001, protocol_version: ProtocolVersion(SemVer { major: 1, minor: 5, patch: 2 }), consensus_certificate: None, is_syncing: false, chainspec_hash: Some(8b0c9bd3559fc2574a7aa76c26ebaabe50a9ff372d38bcaa5d6ad7e963aeff28) }
+2024-11-07T05:09:52.343144Z TRACE tokio_util::codec::framed_impl: flushing framed transport
+2024-11-07T05:09:52.343157Z TRACE tokio_util::codec::framed_impl: writing; remaining=103
+2024-11-07T05:09:52.343231Z TRACE tokio_util::codec::framed_impl: framed transport flushed
+2024-11-07T05:09:52.343277Z TRACE tokio_util::codec::framed_impl: flushing framed transport
+2024-11-07T05:09:52.343292Z TRACE tokio_util::codec::framed_impl: writing; remaining=14
+2024-11-07T05:09:52.343331Z TRACE tokio_util::codec::framed_impl: framed transport flushed
+2024-11-07T05:09:52.343389Z  INFO schultz::network::manager: Sent a ping to 127.0.0.1:34553
+2024-11-07T05:09:52.345728Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
+2024-11-07T05:09:52.345769Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
+2024-11-07T05:09:52.345782Z TRACE tokio_util::codec::framed_impl: frame decoded from buffer
+2024-11-07T05:09:52.345798Z TRACE schultz::network::manager: BYTES FROM CASPER b"\x02\xfd$8Sk\x15\xf7gJ"
+2024-11-07T05:09:52.345843Z  INFO schultz::node: Received a Pong { nonce: Nonce(5361525552774854692) } from 127.0.0.1:52434
+2024-11-07T05:09:52.348200Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
+2024-11-07T05:10:22.380702Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
+2024-11-07T05:10:22.380737Z TRACE tokio_util::codec::framed_impl: frame decoded from buffer
+2024-11-07T05:10:22.380760Z TRACE schultz::network::manager: BYTES FROM CASPER b"\x01\xfd\x8a\xa6\xc9B\"\xb1\x0c\xcc"
+2024-11-07T05:10:22.380819Z  INFO schultz::node: Received a Ping { nonce: Nonce(14703321644165342858) } from "casper". Not going to send a Pong!
+2024-11-07T05:10:22.383153Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
+2024-11-07T05:10:28.393793Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
+2024-11-07T05:10:28.393836Z TRACE tokio_util::codec::framed_impl: frame decoded from buffer
+2024-11-07T05:10:28.393857Z TRACE schultz::network::manager: BYTES FROM CASPER b"\x01\xfd\xc8\x89\x8e>\x0f&\xda\xe8"
+2024-11-07T05:10:28.393912Z  INFO schultz::node: Received a Ping { nonce: Nonce(16778765208638097864) } from "casper". Not going to send a Pong!
+2024-11-07T05:10:28.396303Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
+2024-11-07T05:10:34.403165Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
+2024-11-07T05:10:34.403201Z TRACE tokio_util::codec::framed_impl: frame decoded from buffer
+2024-11-07T05:10:34.403221Z TRACE schultz::network::manager: BYTES FROM CASPER b"\x01\xfdB\xb7C\xbf\xdb\x0b\x1e3"
+2024-11-07T05:10:34.403268Z  INFO schultz::node: Received a Ping { nonce: Nonce(3683394583670273858) } from "casper". Not going to send a Pong!
+2024-11-07T05:10:34.405627Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
+2024-11-07T05:10:40.416227Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
+2024-11-07T05:10:40.416261Z TRACE tokio_util::codec::framed_impl: frame decoded from buffer
+2024-11-07T05:10:40.416280Z TRACE schultz::network::manager: BYTES FROM CASPER b"\x01\xfdSA?\x0f\xe8\xf2\xedw"
+2024-11-07T05:10:40.416331Z  INFO schultz::node: Received a Ping { nonce: Nonce(8641830338495988051) } from "casper". Not going to send a Pong!
+2024-11-07T05:10:40.417576Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
 ```
 
 ### Generating keys using OpenSSL
