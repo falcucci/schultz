@@ -36,6 +36,8 @@ The node software can be compiled afterwards:
 cargo build -p casper-node --release
 ```
 
+## The very first handshake trial
+
 ### Running one node
 
 To run a validator node you will need to specify a config file and launch the validator subcommand:
