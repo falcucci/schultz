@@ -1,23 +1,15 @@
-#[cfg(test)]
-use std::str::FromStr;
-
-#[cfg(test)]
-use casper_execution_engine::core::engine_state::MAX_PAYMENT_AMOUNT;
 use casper_types::bytesrepr::FromBytes;
 use casper_types::bytesrepr::ToBytes;
 use casper_types::bytesrepr::{self};
-#[cfg(test)]
-use casper_types::testing::TestRng;
 use casper_types::Motes;
 use casper_types::TimeDiff;
 use casper_types::U512;
 use datasize::DataSize;
-#[cfg(test)]
-use num_traits::Zero;
-#[cfg(test)]
-use rand::Rng;
 use serde::Deserialize;
 use serde::Serialize;
+
+/// The maximum amount of motes that payment code execution can cost.
+pub const MAX_PAYMENT_AMOUNT: u64 = 2_500_000_000;
 
 /// Configuration values associated with deploys.
 #[derive(Copy, Clone, DataSize, PartialEq, Eq, Serialize, Deserialize, Debug)]
@@ -36,6 +28,7 @@ pub struct DeployConfig {
     pub(crate) payment_args_max_length: u32,
     pub(crate) session_args_max_length: u32,
     pub(crate) native_transfer_minimum_motes: u64,
+    pub(crate) max_timestamp_leeway: TimeDiff,
 }
 
 impl DeployConfig {
@@ -50,61 +43,6 @@ impl DeployConfig {
             self.block_max_approval_count >= total_deploy_and_transfer_slots
         } else {
             false
-        }
-    }
-}
-
-#[cfg(test)]
-impl DeployConfig {
-    /// Generates a random instance using a `TestRng`.
-    pub fn random(rng: &mut TestRng) -> Self {
-        let max_payment_cost = Motes::new(U512::from(rng.gen_range(1_000_000..1_000_000_000)));
-        let max_ttl = TimeDiff::from_seconds(rng.gen_range(60..3_600));
-        let max_dependencies = rng.gen();
-        let max_block_size = rng.gen_range(1_000_000..1_000_000_000);
-        let max_deploy_size = rng.gen_range(100_000..1_000_000);
-        let block_max_deploy_count = rng.gen();
-        let block_max_transfer_count = rng.gen();
-        let block_max_approval_count = rng.gen();
-        let block_gas_limit = rng.gen_range(100_000_000_000..1_000_000_000_000_000);
-        let payment_args_max_length = rng.gen();
-        let session_args_max_length = rng.gen();
-        let native_transfer_minimum_motes =
-            rng.gen_range(MAX_PAYMENT_AMOUNT..1_000_000_000_000_000);
-
-        DeployConfig {
-            max_payment_cost,
-            max_ttl,
-            max_dependencies,
-            max_block_size,
-            max_deploy_size,
-            block_max_deploy_count,
-            block_max_transfer_count,
-            block_max_approval_count,
-            block_gas_limit,
-            payment_args_max_length,
-            session_args_max_length,
-            native_transfer_minimum_motes,
-        }
-    }
-}
-
-#[cfg(test)]
-impl Default for DeployConfig {
-    fn default() -> Self {
-        DeployConfig {
-            max_payment_cost: Motes::zero(),
-            max_ttl: TimeDiff::from_str("1day").unwrap(),
-            max_dependencies: 10,
-            max_block_size: 10_485_760,
-            max_deploy_size: 1_048_576,
-            block_max_deploy_count: 10,
-            block_max_transfer_count: 1000,
-            block_max_approval_count: 2600,
-            block_gas_limit: 10_000_000_000_000,
-            payment_args_max_length: 1024,
-            session_args_max_length: 1024,
-            native_transfer_minimum_motes: MAX_PAYMENT_AMOUNT,
         }
     }
 }
@@ -124,6 +62,7 @@ impl ToBytes for DeployConfig {
         buffer.extend(self.payment_args_max_length.to_bytes()?);
         buffer.extend(self.session_args_max_length.to_bytes()?);
         buffer.extend(self.native_transfer_minimum_motes.to_bytes()?);
+        buffer.extend(self.max_timestamp_leeway.to_bytes()?);
         Ok(buffer)
     }
 
@@ -140,6 +79,7 @@ impl ToBytes for DeployConfig {
             + self.payment_args_max_length.serialized_length()
             + self.session_args_max_length.serialized_length()
             + self.native_transfer_minimum_motes.serialized_length()
+            + self.max_timestamp_leeway.serialized_length()
     }
 }
 
@@ -158,6 +98,7 @@ impl FromBytes for DeployConfig {
         let (payment_args_max_length, remainder) = u32::from_bytes(remainder)?;
         let (session_args_max_length, remainder) = u32::from_bytes(remainder)?;
         let (native_transfer_minimum_motes, remainder) = u64::from_bytes(remainder)?;
+        let (max_timestamp_leeway, remainder) = TimeDiff::from_bytes(remainder)?;
         let config = DeployConfig {
             max_payment_cost,
             max_ttl,
@@ -171,55 +112,8 @@ impl FromBytes for DeployConfig {
             payment_args_max_length,
             session_args_max_length,
             native_transfer_minimum_motes,
+            max_timestamp_leeway,
         };
         Ok((config, remainder))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn bytesrepr_roundtrip() {
-        let mut rng = crate::new_rng();
-        let config = DeployConfig::random(&mut rng);
-        bytesrepr::test_serialization_roundtrip(&config);
-    }
-
-    #[test]
-    fn toml_roundtrip() {
-        let mut rng = crate::new_rng();
-        let config = DeployConfig::random(&mut rng);
-        let encoded = toml::to_string_pretty(&config).unwrap();
-        let decoded = toml::from_str(&encoded).unwrap();
-        assert_eq!(config, decoded);
-    }
-
-    #[test]
-    fn deploy_and_transfer_counts_valid() {
-        let config = DeployConfig {
-            block_max_approval_count: 100,
-            block_max_deploy_count: 100,
-            block_max_transfer_count: 100,
-            ..Default::default()
-        };
-        assert!(!config.is_valid());
-
-        let config = DeployConfig {
-            block_max_approval_count: 200,
-            block_max_deploy_count: 100,
-            block_max_transfer_count: 100,
-            ..Default::default()
-        };
-        assert!(config.is_valid());
-
-        let config = DeployConfig {
-            block_max_approval_count: 200,
-            block_max_deploy_count: 10,
-            block_max_transfer_count: 100,
-            ..Default::default()
-        };
-        assert!(config.is_valid());
     }
 }

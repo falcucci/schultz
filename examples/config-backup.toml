@@ -36,18 +36,6 @@ shutdown_for_upgrade_timeout = '2min'
 # Maximum time a node will wait for an upgrade to commit.
 upgrade_timeout = '30sec'
 
-# The node detects when it should do a controlled shutdown when it is in a detectably bad state
-# in order to avoid potentially catastrophic uncontrolled crashes. Generally, a node should be
-# allowed to shutdown, and if restarted that node will generally recover gracefully and resume
-# normal operation. However, actively validating nodes have subjective state in memory that is
-# lost on shutdown / restart and must be reacquired from other validating nodes on restart.
-# If all validating nodes shutdown in the middle of an era, social consensus is required to restart
-# the network. As a mitigation for that, the following config can be set to true on some validator
-# nodes to cause nodes that are supposed to be validators in the current era to ignore controlled
-# shutdown events and stay up. This allows them to act as sentinels for the consensus data for
-# other restarting nodes. This config is inert on non-validating nodes.
-prevent_validator_shutdown = false
-
 
 # =================================
 # Configuration options for logging
@@ -547,17 +535,6 @@ latch_reset_interval = '5sec'
 # activity happened.
 stall_limit = '120sec'
 
-# =============================================
-# Configuration options for the block validator
-# =============================================
-[block_validator]
-
-# Maximum number of completed entries to retain.
-#
-# A higher value can avoid creating needless validation work on an already-validated proposed
-# block, but comes at the cost of increased memory consumption.
-max_completed_entries = 3
-
 
 # ==================================
 # Configuration options for fetchers
@@ -592,20 +569,6 @@ max_query_depth = 5
 # If unset, defaults to true.
 enable_manual_sync = true
 
-
-# =============================================
-# Configuration options for the deploy acceptor
-# =============================================
-[deploy_acceptor]
-
-# The leeway allowed when considering whether a deploy is future-dated or not.
-#
-# To accommodate minor clock drift, deploys whose timestamps are within `timestamp_leeway` in the
-# future are still acceptable.
-#
-# The maximum value to which `timestamp_leeway` can be set is defined by the chainspec setting
-# `deploys.max_timestamp_leeway`.
-timestamp_leeway = '2 seconds'
 
 # ===========================================
 # Configuration options for the deploy buffer
