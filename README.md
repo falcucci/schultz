@@ -65,6 +65,12 @@ The Carper node should now be running so we can handle the incoming connections.
 cd schultz && cargo build --release
 ```
 
+Or you can just install using cargo:
+
+```bash
+cargo install schultz
+```
+
 The Schultz node can be run with the following command:
 
 ```bash
