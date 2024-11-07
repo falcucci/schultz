@@ -6,7 +6,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("Error from the Communications module {0:?}")]
+    #[error("Error from the network module {0:?}")]
     NetworkManager(ManagerError),
 }
 

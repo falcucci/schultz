@@ -20,7 +20,7 @@ pub enum ManagerError {
     ),
     #[error("Error serializing protocol handshake")]
     CouldNotEncodeOurHandshake(String),
-    #[error("Error from the Communications module {0:?}")]
+    #[error("Error from the Network module {0:?}")]
     #[serde(skip_serializing)]
     Tls(TLSError),
 }

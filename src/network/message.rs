@@ -52,7 +52,7 @@ pub struct SchultzMessage {
 impl SchultzMessage {
     pub fn new(payload: Bytes) -> Result<Self, ManagerError> { Ok(SchultzMessage { payload }) }
 
-    // Helper to write CommsMessage bytes to the provided stream.
+    // Helper to write SchultzMessage bytes to the provided stream.
     pub async fn write_to_stream(&self, stream: &mut FramedTransport) -> Result<(), ManagerError> {
         let SchultzMessage { payload, .. } = self;
 
