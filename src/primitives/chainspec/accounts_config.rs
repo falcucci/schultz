@@ -132,7 +132,7 @@ impl AccountsConfig {
         self.accounts.iter().find(|account| &account.public_key == public_key)
     }
 
-    pub(crate) fn is_genesis_validator(&self, public_key: &PublicKey) -> bool {
+    pub fn is_genesis_validator(&self, public_key: &PublicKey) -> bool {
         match self.account(public_key) {
             None => false,
             Some(account_config) => account_config.is_genesis_validator(),

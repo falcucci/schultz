@@ -97,7 +97,7 @@ pub fn parse_toml<P: AsRef<Path>>(chainspec_path: P) -> Result<Chainspec, Error>
     let root = chainspec_path.as_ref().parent().unwrap_or_else(|| Path::new(""));
 
     // accounts.toml must live in the same directory as chainspec.toml.
-    let (accounts_config, maybe_genesis_accounts_bytes) = AccountsConfig::from_dir(root)?;
+    let (accounts_config, _maybe_genesis_accounts_bytes) = AccountsConfig::from_dir(root)?;
 
     let network_config = NetworkConfig {
         name: toml_chainspec.network.name,
@@ -106,7 +106,7 @@ pub fn parse_toml<P: AsRef<Path>>(chainspec_path: P) -> Result<Chainspec, Error>
     };
 
     // global_state_update.toml must live in the same directory as chainspec.toml.
-    let (global_state_update, maybe_global_state_bytes) =
+    let (global_state_update, _maybe_global_state_bytes) =
         match GlobalStateUpdateConfig::from_dir(root)? {
             Some((config, bytes)) => (Some(GlobalStateUpdate::try_from(config)?), Some(bytes)),
             None => (None, None),

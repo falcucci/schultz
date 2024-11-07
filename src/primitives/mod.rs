@@ -13,7 +13,6 @@ use casper_types::bytesrepr::ToBytes;
 use casper_types::bytesrepr::U32_SERIALIZED_LENGTH;
 use casper_types::Gas;
 use casper_types::ProtocolVersion;
-use casper_types::U512;
 use chainspec::core_config::CoreConfig;
 use chainspec::deploy_config::DeployConfig;
 use chainspec::error::Error;

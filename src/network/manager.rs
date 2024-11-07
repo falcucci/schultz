@@ -16,7 +16,6 @@ use openssl::pkey::PKeyRef;
 use openssl::pkey::Private;
 use openssl::ssl::Ssl;
 use openssl::ssl::SslAcceptor;
-use openssl::ssl::SslConnector;
 use openssl::ssl::SslMethod;
 use openssl::x509::X509Ref;
 use rand::RngCore;
