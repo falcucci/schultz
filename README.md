@@ -27,8 +27,7 @@ git clone git@github.com:falcucci/schultz.git
 The Casper node must be compiled first so before building the Casper node, prepare your Rust build environment:
 
 ```bash
-cd casper-node
-make setup-rs
+cd casper-node && make setup-rs
 ```
 
 The node software can be compiled afterwards:
