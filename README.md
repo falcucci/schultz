@@ -59,6 +59,8 @@ The Carper node should now be running so we can handle the incoming connections.
 cd schultz && cargo build --release
 ```
 
+The Schultz node can be run with the following command:
+
 ```bash
 RUST_LOG=trace ./target/release/schultz bootstrap --addr 127.0.0.1:5001 --bootnode 127.0.0.1:34553 --chainspec ./examples
 ```
