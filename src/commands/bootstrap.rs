@@ -4,20 +4,18 @@ use std::str::FromStr;
 
 use crate::dirs;
 use crate::node::Node;
-use crate::Context;
 
-pub async fn run(
-    _ctx: Context,
+pub async fn setup(
     addr: String,
-    bootnodes: String,
+    bootnode_addr: Option<String>,
     chainspec: Option<String>,
 ) -> miette::Result<()> {
-    println!("Bootstrap Schultz node");
     let schultz_addr = SocketAddr::from_str(&addr).expect("Invalid Schultz address");
-    println!("Schultz address: {}", schultz_addr);
 
-    let bootnodes_addrs = SocketAddr::from_str(&bootnodes).expect("Invalid bootnode address");
-    println!("Bootnode address: {}", bootnodes_addrs);
+    let mut bootnodes = vec![];
+    if let Some(peer_addr) = &bootnode_addr {
+        bootnodes.push(SocketAddr::from_str(peer_addr).expect("Invalid bootnode address"));
+    }
 
     let chainspec_path = chainspec.unwrap_or_else(|| {
         dirs::ensure_root_dir(None)
@@ -26,15 +24,14 @@ pub async fn run(
             .to_string_lossy()
             .to_string()
     });
-    println!("Chainspec path: {}", chainspec_path);
 
-    let node = Node::new(
-        schultz_addr,
-        vec![bootnodes_addrs],
-        PathBuf::from(chainspec_path),
-    )
-    .await
-    .expect("Failed to create Schultz node");
+    let node = Node::new(schultz_addr, bootnodes, PathBuf::from(chainspec_path));
+    match node.await {
+        Ok(instance) => {
+            instance.keepalive().await;
+        }
+        Err(e) => eprintln!("Node failed: {}", e),
+    }
 
     Ok(())
 }

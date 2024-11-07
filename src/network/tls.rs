@@ -13,24 +13,31 @@ use openssl::ec::EcKey;
 use openssl::error::ErrorStack;
 use openssl::nid::Nid;
 use openssl::pkey::PKey;
+use openssl::pkey::PKeyRef;
 use openssl::pkey::Private;
 use openssl::pkey::Public;
+use openssl::ssl::SslConnector;
+use openssl::ssl::SslContextBuilder;
+use openssl::ssl::SslMethod;
+use openssl::ssl::SslVerifyMode;
+use openssl::ssl::SslVersion;
 use openssl::x509::X509Builder;
 use openssl::x509::X509Name;
 use openssl::x509::X509NameBuilder;
 use openssl::x509::X509NameRef;
+use openssl::x509::X509Ref;
 use openssl::x509::X509;
+use tracing::info;
 
 use super::error::ManagerError;
 use super::error::TLSError;
-use crate::error::Error;
 use crate::utils::Sha512;
 
 /// OpenSSL result type alias.
 ///
 /// Many functions rely solely on `openssl` functions and return this kind of
 /// result.
-type SslResult<T> = Result<T, ErrorStack>;
+pub type SslResult<T> = Result<T, ErrorStack>;
 
 /// Casper's chosen signature algorithm (**ECDSA  with SHA512**).
 const SIGNATURE_ALGORITHM: Nid = Nid::ECDSA_WITH_SHA512;
@@ -43,7 +50,7 @@ pub const SIGNATURE_DIGEST: Nid = Nid::SHA512;
 
 /// An ephemeral [PKey<Private>] and [TlsCert] that identifies this node
 #[derive(DataSize, Debug, Clone)]
-pub(crate) struct Identity {
+pub struct Identity {
     pub(super) secret_key: Arc<PKey<Private>>,
     pub(super) tls_certificate: Arc<X509>,
     pub(super) network_ca: Option<Arc<X509>>,
@@ -58,7 +65,8 @@ impl Identity {
         }
     }
 
-    pub(crate) fn with_generated_certs() -> Result<Self, ManagerError> {
+    pub fn with_generated_certs() -> Result<Self, ManagerError> {
+        info!("Generating new keys and certificates");
         let (not_yet_validated_x509_cert, secret_key) = generate_node_cert()
             .map_err(|error| ManagerError::Tls(TLSError::CouldNotGenerateTlsCertificate(error)))?;
         let tls_certificate = validate_self_signed_cert(not_yet_validated_x509_cert)?;
@@ -275,4 +283,87 @@ pub(crate) fn validate_self_signed_cert(cert: X509) -> Result<X509, TLSError> {
     }
 
     Ok(cert)
+}
+
+/// Creates a TLS acceptor for a client.
+///
+/// A connector compatible with the acceptor created using
+/// `create_tls_acceptor`. Server certificates must always be validated using
+/// `validate_cert` after connecting.
+pub(crate) fn create_tls_connector(
+    cert: &X509Ref,
+    private_key: &PKeyRef<Private>,
+) -> SslResult<SslConnector> {
+    let mut builder = SslConnector::builder(SslMethod::tls_client())?;
+    set_context_options(&mut builder, cert, private_key)?;
+
+    Ok(builder.build())
+}
+
+/// Sets common options of both acceptor and connector on TLS context.
+///
+/// Used internally to set various TLS parameters.
+pub fn set_context_options(
+    ctx: &mut SslContextBuilder,
+    cert: &X509Ref,
+    private_key: &PKeyRef<Private>,
+) -> SslResult<()> {
+    ctx.set_min_proto_version(Some(SslVersion::TLS1_3))?;
+
+    ctx.set_certificate(cert)?;
+    ctx.set_private_key(private_key)?;
+    ctx.check_private_key()?;
+
+    // Note that this does not seem to work as one might naively expect; the client
+    // can still send no certificate and there will be no error from OpenSSL.
+    // For this reason, we pass set `PEER` (causing the request of a cert), but
+    // pass all of them through and verify them after the handshake has
+    // completed.
+    ctx.set_verify_callback(SslVerifyMode::PEER, |_, _| true);
+
+    Ok(())
+}
+
+pub fn validate_peer_cert(peer_cert: X509) -> Result<X509, TLSError> {
+    if peer_cert.signature_algorithm().object().nid() != SIGNATURE_ALGORITHM {
+        // The signature algorithm is not of the exact kind we are using to generate our
+        // certificates, an attacker could have used a weaker one to generate colliding
+        // keys.
+        return Err(TLSError::WrongSignatureAlgorithm);
+    }
+    // TODO: Lock down extensions on the certificate --- if we manage to lock down
+    // the whole cert in       a way that no additional bytes can be added (all
+    // fields are either known or of fixed       length) we would have an
+    // additional hurdle for preimage attacks to clear.
+
+    let subject =
+        name_to_string(peer_cert.subject_name()).map_err(|_| TLSError::CorruptSubjectOrIssuer)?;
+    let issuer =
+        name_to_string(peer_cert.issuer_name()).map_err(|_| TLSError::CorruptSubjectOrIssuer)?;
+    if subject != issuer {
+        // All of our certificates are self-signed, so it cannot hurt to check.
+        return Err(TLSError::NotSelfSigned);
+    }
+
+    // All our certificates have serial number 1.
+    if !num_eq(peer_cert.serial_number(), 1).map_err(|_| TLSError::InvalidSerialNumber)? {
+        return Err(TLSError::WrongSerialNumber);
+    }
+
+    // Check expiration times against current time.
+    validate_cert_expiration_date(&peer_cert)?;
+
+    // Ensure that the key is using the correct curve parameters.
+    let (public_key, ec_key) = validate_cert_ec_key(&peer_cert)?;
+    if ec_key.group().curve_name() != Some(SIGNATURE_CURVE) {
+        // The underlying curve is not the one we chose.
+        return Err(TLSError::WrongCurve);
+    }
+
+    // Finally we can check the actual signature.
+    if !peer_cert.verify(&public_key).map_err(|_| TLSError::FailedToValidateSignature)? {
+        return Err(TLSError::InvalidSignature);
+    }
+
+    Ok(peer_cert)
 }

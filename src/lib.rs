@@ -44,7 +44,7 @@ pub enum Commands {
             help = "Casper SocketAddr to bootstrap from",
             env = "BOOTNODE"
         )]
-        bootnode: String,
+        bootnode: Option<String>,
 
         #[arg(
             short,

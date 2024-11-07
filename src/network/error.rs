@@ -9,6 +9,8 @@ use thiserror::Error;
 pub enum ManagerError {
     #[error("Failed to bind to address")]
     PeerNotFound,
+    #[error("Error sending message to peer")]
+    SendFailed(String),
     #[error("failed to get listener addr")]
     ListenerCreation(
         #[serde(skip_serializing)]
@@ -16,6 +18,8 @@ pub enum ManagerError {
         io::Error,
         SocketAddr,
     ),
+    #[error("Error serializing protocol handshake")]
+    CouldNotEncodeOurHandshake(String),
     #[error("Error from the Communications module {0:?}")]
     #[serde(skip_serializing)]
     Tls(TLSError),

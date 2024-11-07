@@ -15,7 +15,7 @@
 # note: `nosync` is incompatible with validator behavior; a nosync node is prevented from participating
 #        in consensus / switching to validate mode. it is primarily for lightweight nodes that are
 #        only interested in recent activity.
-sync_handling = 'ttl'
+sync_handling = 'genesis'
 
 # Idle time after which the syncing process is considered stalled.
 idle_tolerance = '20min'
@@ -105,7 +105,7 @@ clock_tolerance = '1sec'
 [consensus.highway]
 
 # The duration for which incoming vertices with missing dependencies should be kept in a queue.
-pending_vertex_timeout = '30min'
+pending_vertex_timeout = '1min'
 
 # Request the latest protocol state from a random peer periodically, with this interval.
 # '0sec' means it is disabled and we never request the protocol state from a peer.
@@ -113,7 +113,7 @@ request_state_interval = '20sec'
 
 # Log inactive or faulty validators periodically, with this interval.
 # '0sec' means it is disabled and we never print the log message.
-log_participation_interval = '1min'
+log_participation_interval = '15sec'
 
 # Log the synchronizer state periodically, with this interval.
 # '0sec' means it is disabled and we never print the log message.
@@ -166,7 +166,7 @@ public_address = '127.0.0.1:0'
 
 # Address to bind to for listening.
 # If port is set to 0, a random port will be used.
-bind_address = '0.0.0.0:35000'
+bind_address = '0.0.0.0:34553'
 
 # Addresses to connect to in order to join the network.
 #
@@ -176,13 +176,13 @@ bind_address = '0.0.0.0:35000'
 #
 # Multiple addresses can be given and the node will attempt to connect to each, requiring at least
 # one connection.
-known_addresses = ['127.0.0.1:34553', '127.0.0.1:5001']
+known_addresses = ['127.0.0.1:5001']
 
 # Minimum number of fully-connected peers to consider network component initialized.
 min_peers_for_initialization = 3
 
 # The interval between each fresh round of gossiping the node's public address.
-gossip_interval = '120sec'
+gossip_interval = '30sec'
 
 # Initial delay for starting address gossipping after the network starts. This should be slightly
 # more than the expected time required for initial connections to complete.
@@ -235,7 +235,7 @@ tarpit_duration = '10min'
 tarpit_chance = 0.2
 
 # How long peers remain blocked after they get blocklisted.
-blocklist_retain_duration = '10min'
+blocklist_retain_duration = '1min'
 
 # Identity of a node
 #
@@ -562,12 +562,12 @@ max_global_state_size = 2_089_072_132_096
 # Optional depth limit to use for global state queries.
 #
 # If unset, defaults to 5.
-#max_query_depth = 5
+max_query_depth = 5
 
 # Enable manual synchronizing to disk.
 #
 # If unset, defaults to true.
-#enable_manual_sync = true
+enable_manual_sync = true
 
 
 # ===========================================
@@ -585,7 +585,7 @@ expiry_check_interval = '1min'
 [diagnostics_port]
 
 # If set, the diagnostics port will be available on a UNIX socket.
-enabled = false
+enabled = true
 
 # Filename for the UNIX domain socket the diagnostics port listens on.
 socket_path = "debug.socket"

@@ -1,22 +1,72 @@
 use std::fmt;
+use std::fmt::Debug;
 use std::fmt::Display;
 use std::fmt::Formatter;
+use std::io;
+use std::io::Cursor;
 use std::net::SocketAddr;
+use std::pin::Pin;
+use std::sync::Arc;
 
+use bincode::config::RejectTrailing;
+use bincode::config::VarintEncoding;
+use bincode::config::WithOtherEndian;
+use bincode::config::WithOtherIntEncoding;
+use bincode::config::WithOtherLimit;
+use bincode::config::WithOtherTrailing;
+use bincode::Options;
+use bytes::Bytes;
+use bytes::BytesMut;
 use casper_hashing::Digest;
 use casper_types::AsymmetricType;
 use casper_types::ProtocolVersion;
 use casper_types::PublicKey;
 use casper_types::Signature;
+use futures::SinkExt;
+use futures::StreamExt;
 use serde::de::Error;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
 use serde::Serializer;
 use strum::EnumDiscriminants;
+use tokio::net::TcpStream;
+use tokio_openssl::SslStream;
+use tokio_serde::Deserializer as TokioDeserializer;
+use tokio_serde::Serializer as TokioSerializer;
+use tokio_util::codec::LengthDelimitedCodec;
 
+use super::error::ManagerError;
 use crate::primitives::Nonce;
 use crate::utils::OptDisplay;
+
+/// Transport type alias for base encrypted connections.
+type Transport = SslStream<TcpStream>;
+pub type FramedTransport = tokio_util::codec::Framed<Transport, LengthDelimitedCodec>;
+
+/// A thin wrapper over bytes to impl Payload Trait
+pub struct SchultzMessage {
+    payload: Bytes,
+}
+
+impl SchultzMessage {
+    pub fn new(payload: Bytes) -> Result<Self, ManagerError> { Ok(SchultzMessage { payload }) }
+
+    // Helper to write CommsMessage bytes to the provided stream.
+    pub async fn write_to_stream(&self, stream: &mut FramedTransport) -> Result<(), ManagerError> {
+        let SchultzMessage { payload, .. } = self;
+
+        let (mut writer, mut _reader) = stream.split();
+
+        // Send bytes of TcpStream
+        writer
+            .send(payload.clone())
+            .await
+            .map_err(|e| ManagerError::SendFailed(e.to_string()))?;
+
+        Ok(())
+    }
+}
 
 /// Certificate used to indicate that the peer is a validator using the
 /// specified public key.
@@ -26,7 +76,7 @@ use crate::utils::OptDisplay;
 /// all-lowercase hex, hence circumventing the checksummed-hex encoding used by
 /// `PublicKey` and `Signature` in versions 1.4.2 and 1.4.3.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) struct ConsensusCertificate {
+pub struct ConsensusCertificate {
     public_key: PublicKey,
     signature: Signature,
 }
@@ -35,10 +85,43 @@ impl Display for ConsensusCertificate {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result { write!(f, "key:{}", self.public_key) }
 }
 
+/// msgpack encoder/decoder for messages.
+#[derive(Debug)]
+pub struct MessagePackFormat;
+
+impl<M> TokioSerializer<M> for MessagePackFormat
+where
+    M: Serialize,
+{
+    // Note: We cast to `io::Error` because of the `Codec::Error:
+    // Into<Transport::Error>` requirement.
+    type Error = io::Error;
+
+    #[inline]
+    fn serialize(self: Pin<&mut Self>, item: &M) -> Result<Bytes, Self::Error> {
+        rmp_serde::to_vec(item)
+            .map(Into::into)
+            .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))
+    }
+}
+
+impl<M> TokioDeserializer<M> for MessagePackFormat
+where
+    for<'de> M: Deserialize<'de>,
+{
+    type Error = io::Error;
+
+    #[inline]
+    fn deserialize(self: Pin<&mut Self>, src: &BytesMut) -> Result<M, Self::Error> {
+        rmp_serde::from_read(Cursor::new(src))
+            .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, EnumDiscriminants)]
 #[strum_discriminants(derive(strum::EnumIter))]
 #[allow(clippy::large_enum_variant)]
-pub(crate) enum Message<P> {
+pub enum Message<P> {
     Handshake {
         /// Network we are connected to.
         network_name: String,
@@ -180,5 +263,80 @@ impl<P: Display> Display for Message<P> {
             Message::Pong { nonce } => write!(f, "pong({})", nonce),
             Message::Payload(payload) => write!(f, "payload: {}", payload),
         }
+    }
+}
+
+/// bincode encoder/decoder for messages.
+#[allow(clippy::type_complexity)]
+pub struct BincodeFormat(
+    // Note: `bincode` encodes its options at the type level. The exact shape is determined by
+    // `BincodeFormat::default()`.
+    pub  WithOtherTrailing<
+        WithOtherIntEncoding<
+            WithOtherEndian<
+                WithOtherLimit<bincode::DefaultOptions, bincode::config::Infinite>,
+                bincode::config::LittleEndian,
+            >,
+            VarintEncoding,
+        >,
+        RejectTrailing,
+    >,
+);
+
+impl BincodeFormat {
+    /// Serializes an arbitrary serializable value with the networking bincode
+    /// serializer.
+    #[inline]
+    pub fn serialize_arbitrary<T>(&self, item: &T) -> io::Result<Vec<u8>>
+    where
+        T: Serialize,
+    {
+        self.0
+            .serialize(item)
+            .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))
+    }
+}
+
+impl Debug for BincodeFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("BincodeFormat")
+    }
+}
+
+impl Default for BincodeFormat {
+    fn default() -> Self {
+        let opts = bincode::options()
+            .with_no_limit() // We rely on framed tokio transports to impose limits.
+            .with_little_endian() // Default at the time of this writing, we are merely pinning it.
+            .with_varint_encoding() // Same as above.
+            .reject_trailing_bytes(); // There is no reason for us not to reject trailing bytes.
+        BincodeFormat(opts)
+    }
+}
+
+impl<P> TokioSerializer<Arc<Message<P>>> for BincodeFormat
+where
+    Message<P>: Serialize,
+{
+    type Error = io::Error;
+
+    #[inline]
+    fn serialize(self: Pin<&mut Self>, item: &Arc<Message<P>>) -> Result<Bytes, Self::Error> {
+        let msg = &**item;
+        self.serialize_arbitrary(msg).map(Into::into)
+    }
+}
+
+impl<P> TokioDeserializer<Message<P>> for BincodeFormat
+where
+    for<'de> Message<P>: Deserialize<'de>,
+{
+    type Error = io::Error;
+
+    #[inline]
+    fn deserialize(self: Pin<&mut Self>, src: &BytesMut) -> Result<Message<P>, Self::Error> {
+        self.0
+            .deserialize(src)
+            .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))
     }
 }

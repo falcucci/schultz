@@ -1,15 +1,18 @@
 mod chainspec;
 
 use std::fmt;
+use std::fmt::Debug;
 use std::fmt::Display;
 use std::fmt::Formatter;
 use std::path::Path;
 
+use casper_hashing::Digest;
 use casper_types::bytesrepr;
 use casper_types::bytesrepr::FromBytes;
 use casper_types::bytesrepr::ToBytes;
 use casper_types::bytesrepr::U32_SERIALIZED_LENGTH;
 use casper_types::Gas;
+use casper_types::ProtocolVersion;
 use casper_types::U512;
 use chainspec::core_config::CoreConfig;
 use chainspec::deploy_config::DeployConfig;
@@ -19,8 +22,12 @@ use chainspec::network_config::NetworkConfig;
 use chainspec::parse_toml;
 use chainspec::protocol_config::ProtocolConfig;
 use datasize::DataSize;
+use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde::Serialize;
+use tracing::error;
+
+use crate::network::message::Message;
 
 /// The name of the chainspec file on disk.
 pub const CHAINSPEC_FILENAME: &str = "chainspec.toml";
@@ -234,7 +241,11 @@ pub type Cost = u32;
 //       While we do check for consecutive ping nonces being generated, we still like the lower
 //       collision chance for repeated pings being sent.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
-pub(crate) struct Nonce(u64);
+pub struct Nonce(u64);
+
+impl Nonce {
+    pub fn new(num: u64) -> Self { Self(num) }
+}
 
 impl Display for Nonce {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result { write!(f, "{:016X}", self.0) }
@@ -243,7 +254,7 @@ impl Display for Nonce {
 /// A collection of configuration settings describing the state of the system at
 /// genesis and after upgrades to basic system functionality occurring after
 /// genesis.
-#[derive(DataSize, PartialEq, Eq, Serialize, Debug)]
+#[derive(DataSize, PartialEq, Eq, Serialize, Debug, Clone)]
 pub struct Chainspec {
     /// Protocol config.
     #[serde(rename = "protocol")]
@@ -277,6 +288,64 @@ pub struct Chainspec {
 impl Chainspec {
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         parse_toml::parse_toml(path.as_ref().join(CHAINSPEC_FILENAME))
+    }
+
+    /// Serializes `self` and hashes the resulting bytes.
+    pub fn hash(&self) -> Digest {
+        let serialized_chainspec = self.to_bytes().unwrap_or_else(|error| {
+            error!(%error, "failed to serialize chainspec");
+            vec![]
+        });
+        Digest::hash(serialized_chainspec)
+    }
+
+    /// Returns the protocol version of the chainspec.
+    pub fn protocol_version(&self) -> ProtocolVersion { self.protocol_config.version }
+}
+
+impl ToBytes for Chainspec {
+    fn to_bytes(&self) -> Result<Vec<u8>, bytesrepr::Error> {
+        let mut buffer = bytesrepr::allocate_buffer(self)?;
+        buffer.extend(self.protocol_config.to_bytes()?);
+        buffer.extend(self.network_config.to_bytes()?);
+        buffer.extend(self.core_config.to_bytes()?);
+        buffer.extend(self.highway_config.to_bytes()?);
+        buffer.extend(self.deploy_config.to_bytes()?);
+        buffer.extend(self.wasm_config.to_bytes()?);
+        buffer.extend(self.system_costs_config.to_bytes()?);
+        Ok(buffer)
+    }
+
+    fn serialized_length(&self) -> usize {
+        self.protocol_config.serialized_length()
+            + self.network_config.serialized_length()
+            + self.core_config.serialized_length()
+            + self.highway_config.serialized_length()
+            + self.deploy_config.serialized_length()
+            + self.wasm_config.serialized_length()
+            + self.system_costs_config.serialized_length()
+    }
+}
+
+impl FromBytes for Chainspec {
+    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), bytesrepr::Error> {
+        let (protocol_config, remainder) = ProtocolConfig::from_bytes(bytes)?;
+        let (network_config, remainder) = NetworkConfig::from_bytes(remainder)?;
+        let (core_config, remainder) = CoreConfig::from_bytes(remainder)?;
+        let (highway_config, remainder) = HighwayConfig::from_bytes(remainder)?;
+        let (deploy_config, remainder) = DeployConfig::from_bytes(remainder)?;
+        let (wasm_config, remainder) = WasmConfig::from_bytes(remainder)?;
+        let (system_costs_config, remainder) = SystemConfig::from_bytes(remainder)?;
+        let chainspec = Chainspec {
+            protocol_config,
+            network_config,
+            core_config,
+            highway_config,
+            deploy_config,
+            wasm_config,
+            system_costs_config,
+        };
+        Ok((chainspec, remainder))
     }
 }
 
@@ -1835,3 +1904,7 @@ impl FromBytes for BrTableCost {
         ))
     }
 }
+
+pub trait Payload: Serialize + DeserializeOwned + Clone + Debug + Send + Sync + 'static {}
+
+impl<P: Payload> Message<P> {}

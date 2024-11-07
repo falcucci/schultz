@@ -10,12 +10,12 @@ extern crate core;
 async fn main() -> miette::Result<()> {
     tracing_subscriber::fmt::init();
     let cli = Cli::parse();
-    let ctx = Context::for_cli(&cli)?;
+    let _ = Context::for_cli(&cli)?;
     match cli.command {
         Commands::Bootstrap {
             addr,
             bootnode,
             chainspec,
-        } => bootstrap::run(ctx, addr, bootnode, chainspec).await,
+        } => bootstrap::setup(addr, bootnode, chainspec).await,
     }
 }
