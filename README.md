@@ -38,10 +38,26 @@ cargo build -p casper-node --release
 
 ## The very first handshake trial
 
-### Running one node
+### Running a node as validator
 
 To run a validator node you will need to specify a config file and launch the validator subcommand:
 
 ```
 sudo RUST_LOG=trace ./target/release/casper-node validator <SCHULTZ-PATH>/examples/config.toml
+```
+
+### Generating keys using OpenSSL
+
+The keys are already generated at `./examples` path but just in case you want just generate new ones by generating the secret_key.pem file
+
+```bash
+openssl genpkey -algorithm ed25519 -out secret_key.pem
+```
+
+Generating public keys from the secret_key.pem file
+
+```bash
+openssl pkey -in secret_key.pem -pubout -out public_key.pem
+
+{ echo -n 01; openssl pkey -outform DER -pubout -in "secret_key.pem" | tail -c +13 | openssl base64 | openssl base64 -d | hexdump -ve '/1 "%02x" ' | tr -d "/n"; } > public_key_hex
 ```
