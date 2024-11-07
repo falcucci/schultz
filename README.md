@@ -104,39 +104,6 @@ And the similar handshake trace can be found:
 2024-11-07T05:09:52.343039Z  INFO schultz::network::manager: Sending message to 127.0.0.1:34553
 2024-11-07T05:09:52.343054Z  INFO schultz::network::manager: Sending Handshake to Casper
 2024-11-07T05:09:52.343065Z TRACE schultz::network::manager: Handshake { network_name: "casper", public_addr: 127.0.0.1:5001, protocol_version: ProtocolVersion(SemVer { major: 1, minor: 5, patch: 2 }), consensus_certificate: None, is_syncing: false, chainspec_hash: Some(8b0c9bd3559fc2574a7aa76c26ebaabe50a9ff372d38bcaa5d6ad7e963aeff28) }
-2024-11-07T05:09:52.343144Z TRACE tokio_util::codec::framed_impl: flushing framed transport
-2024-11-07T05:09:52.343157Z TRACE tokio_util::codec::framed_impl: writing; remaining=103
-2024-11-07T05:09:52.343231Z TRACE tokio_util::codec::framed_impl: framed transport flushed
-2024-11-07T05:09:52.343277Z TRACE tokio_util::codec::framed_impl: flushing framed transport
-2024-11-07T05:09:52.343292Z TRACE tokio_util::codec::framed_impl: writing; remaining=14
-2024-11-07T05:09:52.343331Z TRACE tokio_util::codec::framed_impl: framed transport flushed
-2024-11-07T05:09:52.343389Z  INFO schultz::network::manager: Sent a ping to 127.0.0.1:34553
-2024-11-07T05:09:52.345728Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
-2024-11-07T05:09:52.345769Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
-2024-11-07T05:09:52.345782Z TRACE tokio_util::codec::framed_impl: frame decoded from buffer
-2024-11-07T05:09:52.345798Z TRACE schultz::network::manager: BYTES FROM CASPER b"\x02\xfd$8Sk\x15\xf7gJ"
-2024-11-07T05:09:52.345843Z  INFO schultz::node: Received a Pong { nonce: Nonce(5361525552774854692) } from 127.0.0.1:52434
-2024-11-07T05:09:52.348200Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
-2024-11-07T05:10:22.380702Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
-2024-11-07T05:10:22.380737Z TRACE tokio_util::codec::framed_impl: frame decoded from buffer
-2024-11-07T05:10:22.380760Z TRACE schultz::network::manager: BYTES FROM CASPER b"\x01\xfd\x8a\xa6\xc9B\"\xb1\x0c\xcc"
-2024-11-07T05:10:22.380819Z  INFO schultz::node: Received a Ping { nonce: Nonce(14703321644165342858) } from "casper". Not going to send a Pong!
-2024-11-07T05:10:22.383153Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
-2024-11-07T05:10:28.393793Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
-2024-11-07T05:10:28.393836Z TRACE tokio_util::codec::framed_impl: frame decoded from buffer
-2024-11-07T05:10:28.393857Z TRACE schultz::network::manager: BYTES FROM CASPER b"\x01\xfd\xc8\x89\x8e>\x0f&\xda\xe8"
-2024-11-07T05:10:28.393912Z  INFO schultz::node: Received a Ping { nonce: Nonce(16778765208638097864) } from "casper". Not going to send a Pong!
-2024-11-07T05:10:28.396303Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
-2024-11-07T05:10:34.403165Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
-2024-11-07T05:10:34.403201Z TRACE tokio_util::codec::framed_impl: frame decoded from buffer
-2024-11-07T05:10:34.403221Z TRACE schultz::network::manager: BYTES FROM CASPER b"\x01\xfdB\xb7C\xbf\xdb\x0b\x1e3"
-2024-11-07T05:10:34.403268Z  INFO schultz::node: Received a Ping { nonce: Nonce(3683394583670273858) } from "casper". Not going to send a Pong!
-2024-11-07T05:10:34.405627Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
-2024-11-07T05:10:40.416227Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
-2024-11-07T05:10:40.416261Z TRACE tokio_util::codec::framed_impl: frame decoded from buffer
-2024-11-07T05:10:40.416280Z TRACE schultz::network::manager: BYTES FROM CASPER b"\x01\xfdSA?\x0f\xe8\xf2\xedw"
-2024-11-07T05:10:40.416331Z  INFO schultz::node: Received a Ping { nonce: Nonce(8641830338495988051) } from "casper". Not going to send a Pong!
-2024-11-07T05:10:40.417576Z TRACE tokio_util::codec::framed_impl: attempting to decode a frame
 ```
 
 ### Generating keys using OpenSSL
