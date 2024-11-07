@@ -131,7 +131,7 @@ sed -i '' 's/known_addresses = \['\''127.0.0.1:34553'\''\]/known_addresses = \['
 The Schultz node can be run as a listener of Casper upcoming connections through:
 
 ```bash
-RUST_LOG=trace cargo run -- bootstrap --addr 127.0.0.1:5001 --chainspec ./examples
+RUST_LOG=trace ./target/release/schultz -- bootstrap --addr 127.0.0.1:5001 --chainspec ./examples
 ```
 
 And then start the Casper node:
