@@ -57,6 +57,20 @@ pub const MAX_FRAME_LEN: usize = 25165824; // 25 MB as Bytes
 /// Connection Pool polling rate
 pub const POLLING_RATE: u64 = 1; // 1 ms
 
+/// # Manager
+///
+/// The `Manager` struct is responsible for handling network communications,
+/// including setting up TLS connections, managing a pool of connections, and
+/// performing handshakes with peers.
+///
+/// ## Usage
+///
+/// To create a new `Manager`, use the `new` method, providing the required
+/// parameters such as `schultz_addr`, `event_tx`, and `chainspec`.
+///
+/// ```rust
+/// let manager = Manager::new(schultz_addr, event_tx, chainspec).await?; 
+/// ```
 pub struct Manager {
     schultz_addr: SocketAddr,
     tcp_ep: Arc<Mutex<TcpListener>>,
@@ -70,6 +84,27 @@ pub struct Manager {
 }
 
 impl Manager {
+    /// Creates a new `Manager` instance.
+    ///
+    /// This method initializes network communications, binds to the provided
+    /// address, and sets up the necessary listeners for managing connections.
+    ///
+    /// # Parameters
+    ///
+    /// - `schultz_addr`: The address to bind the network listener.
+    /// - `event_tx`: A channel sender for transmitting events.
+    /// - `chainspec`: The chainspec configuration for the network.
+    ///
+    /// # Returns
+    ///
+    /// Returns a `Result` containing the new `Manager` instance or an error
+    /// if initialization fails.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// let manager = Manager::new(schultz_addr, event_tx, chainspec).await?; 
+    /// ```
     pub async fn new<P: Payload>(
         schultz_addr: SocketAddr,
         event_tx: Sender<(SocketAddr, Message<P>)>,
@@ -108,6 +143,25 @@ impl Manager {
 
     pub fn schultz_addr(&self) -> SocketAddr { self.schultz_addr }
 
+    /// Connects to a peer at the specified address.
+    ///
+    /// This method establishes a TCP connection to the given address and
+    /// performs a TLS handshake.
+    ///
+    /// # Parameters
+    ///
+    /// - `addr`: The address of the peer to connect to.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` if the connection is successful, or a `ManagerError`
+    /// if an error occurs.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// manager.connect(&peer_addr).await?; 
+    /// ```
     pub async fn connect(&self, addr: &SocketAddr) -> Result<(), ManagerError> {
         info!("Connecting to {addr:?}");
         let stream = TcpStream::connect(addr).await.map_err(TLSError::TcpConnection)?;
@@ -142,6 +196,25 @@ impl Manager {
         Ok(())
     }
 
+    /// Sends a handshake message to a peer.
+    ///
+    /// This method constructs and sends a handshake message to the specified
+    /// peer address.
+    ///
+    /// # Parameters
+    ///
+    /// - `addr`: The address of the peer to send the handshake to.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` if the handshake is sent successfully, or a
+    /// `ManagerError` if an error occurs.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// manager.handshake::<Payload>(peer_addr).await?; 
+    /// ```
     pub async fn handshake<P: Payload>(&self, addr: SocketAddr) -> Result<(), ManagerError> {
         let mut encoder = MessagePackFormat;
         let hs: Message<P> = Message::Handshake {
@@ -168,6 +241,25 @@ impl Manager {
         Ok(())
     }
 
+    /// Sends a message to a peer.
+    ///
+    /// This method sends the provided payload to the specified peer address.
+    ///
+    /// # Parameters
+    ///
+    /// - `addr`: The address of the peer to send the message to.
+    /// - `payload`: The message payload to send.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` if the message is sent successfully, or a
+    /// `ManagerError` if an error occurs.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// manager.send_message(peer_addr, payload).await?; 
+    /// ```
     pub async fn send_message(&self, addr: SocketAddr, payload: Bytes) -> Result<(), ManagerError> {
         info!("Sending message to {addr:?}");
         let mut conn_pool = self.connection_pool.lock().await;
@@ -178,6 +270,25 @@ impl Manager {
         Ok(())
     }
 
+    /// Sends a ping message to a peer.
+    ///
+    /// This method constructs and sends a ping message to the specified peer
+    /// address.
+    ///
+    /// # Parameters
+    ///
+    /// - `addr`: The address of the peer to send the ping to.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` if the ping is sent successfully, or a
+    /// `ManagerError` if an error occurs.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// manager.send_ping::<YourPayloadType>(peer_addr).await?; 
+    /// ```
     pub async fn send_ping<P: Payload>(&self, addr: SocketAddr) -> Result<(), ManagerError> {
         info!("Sending a ping to {addr:?}");
         let ping: Message<P> = Message::Ping {
@@ -197,13 +308,29 @@ impl Manager {
         Ok(())
     }
 
-    /// Creates a TLS acceptor for a server.
+    /// Creates a TLS acceptor for incoming connections.
     ///
-    /// The acceptor will restrict TLS parameters to secure one defined in this
-    /// crate that are compatible with connectors built with
+    /// This function sets up an `SslAcceptor` using the provided certificate
+    /// and private key. The acceptor restricts TLS parameters to secure ones
+    /// defined in this crate that are compatible with connectors built with
     /// `create_tls_connector`.
     ///
-    /// Incoming certificates must still be validated using `validate_cert`.
+    /// # Parameters
+    ///
+    /// - `cert`: A reference to the certificate (`X509Ref`) used for TLS.
+    /// - `private_key`: A reference to the private key (`PKeyRef<Private>`)
+    ///   used for TLS.
+    ///
+    /// # Returns
+    ///
+    /// Returns an `SslResult` containing the `SslAcceptor` if successful,
+    /// or an error if the acceptor could not be created.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// let acceptor = Manager::create_tls_acceptor(&cert, &private_key)?; 
+    /// ```
     pub fn create_tls_acceptor(
         cert: &X509Ref,
         private_key: &PKeyRef<Private>,
@@ -215,6 +342,28 @@ impl Manager {
         Ok(builder.build())
     }
 
+    /// Sets up a TLS connection with a peer.
+    ///
+    /// This asynchronous function initializes a TLS stream on top of an
+    /// existing TCP stream using the identity provided. It returns a
+    /// `SslStream` that can be used for secure communication.
+    ///
+    /// # Parameters
+    ///
+    /// - `stream`: The TCP stream to wrap with TLS.
+    /// - `identity`: The identity containing the TLS certificate and secret
+    ///   key.
+    ///
+    /// # Returns
+    ///
+    /// Returns a `Result` containing the `SslStream` if successful, or a
+    /// `ManagerError` if the setup fails.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// let tls_stream = Manager::setup_tls(tcp_stream, &identity).await?; 
+    /// ```
     pub async fn setup_tls(
         stream: TcpStream,
         identity: &Identity,
@@ -226,6 +375,26 @@ impl Manager {
             .map_err(|e| ManagerError::Tls(TLSError::TlsInitialization(e.to_string())))
     }
 
+    /// Performs a TLS handshake on the given stream.
+    ///
+    /// This asynchronous function executes a TLS handshake with the connected
+    /// peer. It ensures that the secure connection is properly established.
+    ///
+    /// # Parameters
+    ///
+    /// - `transport`: A mutable reference to the `SslStream` on which to
+    ///   perform the handshake.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` if the handshake is successful, or a `ManagerError`
+    /// if it fails.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// Manager::perform_tls_handshake(&mut tls_stream).await?; 
+    /// ```
     pub async fn perform_tls_handshake(
         transport: &mut SslStream<TcpStream>,
     ) -> Result<(), ManagerError> {
@@ -235,6 +404,22 @@ impl Manager {
             .map_err(|e| ManagerError::Tls(TLSError::TlsHandshake(e.to_string())))
     }
 
+    /// Listens for incoming connections on the TCP endpoint.
+    ///
+    /// This asynchronous function continuously listens for new connections
+    /// on the configured TCP endpoint. For each connection, it sets up TLS
+    /// and performs a handshake, then adds the connection to the connection
+    /// pool.
+    ///
+    /// # Returns
+    ///
+    /// Returns a `JoinHandle<()>` that represents the spawned task.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// let handle = manager.listen_on_endpoint().await; 
+    /// ```
     pub async fn listen_on_endpoint(&self) -> JoinHandle<()> {
         let connection_pool = self.connection_pool.clone();
         let identity = self.identity.clone();
